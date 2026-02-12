@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+
+{% block title %}Проекты{% endblock %}
+
+{% block content %}
+<!-- Заголовок и кнопка создания -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">
+        <i class="bi bi-kanban"></i> Проекты
+    </h1>
+    <a href="{% url 'project_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Новый проект
+    </a>
+</div>
+
+<!-- Панель поиска и фильтров -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <!-- Поиск -->
+            <div class="col-md-4">
+                <label class="form-label">Поиск по названию</label>
+                <div class="input-group">
+                    <input type="text" 
+                           name="search" 
+                           class="form-control"
+                           placeholder="Введите название..."
+                           value="{{ search_query }}">
+
+                </div>
+            </div>
+            
+            <!-- Фильтр по месяцу -->
+            <!-- В панели фильтров: -->
+            <div class="col-md-3">
+                <label class="form-label">Месяц</label>
+                <select name="month" class="form-select">
+                    <option value="">Все месяцы</option>
+                    {% for month in months %}
+                    <option value="{{ month }}" 
+                            {% if month == selected_month %}selected{% endif %}>
+                        {{ month }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Фильтр по выполнению -->
+            <div class="col-md-3">
+                <label class="form-label">Статус выполнения</label>
+                <select name="completion" class="form-select">
+                    <option value="">Все проекты</option>
+                    <option value="0" {% if completion_filter == '0' %}selected{% endif %}>
+                        0% - Не начаты
+                    </option>
+                    <option value="1-49" {% if completion_filter == '1-49' %}selected{% endif %}>
+                        1-49% - Начаты
+                    </option>
+                    <option value="50-99" {% if completion_filter == '50-99' %}selected{% endif %}>
+                        50-99% - В работе
+                    </option>
+                    <option value="100" {% if completion_filter == '100' %}selected{% endif %}>
+                        100% - Завершены
+                    </option>
+                </select>
+            </div>
+            
+            <!-- Кнопки -->
+            <div class="col-md-2">
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-funnel"></i> Применить
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Статистика -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <h3 class="text-primary">{{ total_projects }}</h3>
+                <p class="text-muted mb-0">Всего проектов</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <h3 class="text-info">{{ not_started }}</h3>
+                <p class="text-muted mb-0">Не начаты (0%)</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <h3 class="text-warning">{{ in_progress }}</h3>
+                <p class="text-muted mb-0">В работе (1-99%)</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <h3 class="text-success">{{ completed }}</h3>
+                <p class="text-muted mb-0">Завершены (100%)</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Список проектов -->
+{% if projects %}
+<div class="row">
+    {% for project in projects %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <!-- Заголовок карточки -->
+            <div class="card-header 
+                bg-secondary
+                 text-white">
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ project.project_name }}</h5>
+                    <span class="badge bg-light text-dark">
+                        {{ project.completion_percentage }}%
+                    </span>
+                </div>
+                
+                <div class="mt-2">
+                    <small class="text-light">
+                        <i class="bi bi-calendar-month"></i>
+                    </small>
+                </div>
+            </div>
+            
+            <!-- Тело карточки -->
+            <div class="card-body">
+                <!-- Прогресс-бар -->
+                <div class="mb-3">
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar 
+                            {% if project.completion_percentage == 100 %}bg-success
+                            {% elif project.completion_percentage >= 50 %}bg-info
+                            {% else %}bg-warning{% endif %}" 
+                             style="width: {{ project.completion_percentage }}%">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Даты -->
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <small class="text-muted">Создан</small>
+                        <p class="mb-0">{{ project.created_date|date:"d.m.Y" }}</p>
+                    </div>
+                </div>
+                
+                <!-- Описание -->
+                {% if project.description %}
+                <div>
+                    <small class="text-muted">Описание</small>
+                    <p class="mb-0">{{ project.description|truncatechars:100 }}</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Футер карточки -->
+            <div class="card-footer bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <!-- Статус -->
+                    <span class="badge 
+                        {% if project.completion_percentage == 100 %}bg-success
+                        {% elif project.completion_percentage == 0 %}bg-secondary
+                        {% else %}bg-info{% endif %}">
+                        
+                        {% if project.completion_percentage == 100 %}
+                            <i class="bi bi-check-circle"></i> Завершен
+                        {% elif project.completion_percentage == 0 %}
+                            <i class="bi bi-circle"></i> Не начат
+                        {% else %}
+                            <i class="bi bi-arrow-clockwise"></i> В работе
+                        {% endif %}
+                    </span>
+                    
+            <!-- Кнопки -->
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'project_detail' project.pk %}" 
+                        class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye me-1"></i> Подробнее
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Информация о результатах -->
+<div class="alert alert-light border mt-4">
+    <i class="bi bi-info-circle"></i>
+    Найдено проектов: <strong>{{ projects|length }}</strong>
+    
+    {% if search_query %}
+        по запросу "<strong>{{ search_query }}</strong>"
+    {% endif %}
+    
+    {% if selected_month %}
+        за <strong>{{ selected_month }}</strong>
+    {% endif %}
+    
+    {% if completion_filter %}
+        со статусом 
+        <strong>
+            {% if completion_filter == '0' %}0% (Не начаты)
+            {% elif completion_filter == '1-49' %}1-49% (Начаты)
+            {% elif completion_filter == '50-99' %}50-99% (В работе)
+            {% elif completion_filter == '100' %}100% (Завершены)
+            {% endif %}
+        </strong>
+    {% endif %}
+</div>
+
+{% else %}
+<!-- Нет проектов -->
+<div class="text-center py-5">
+    <div class="mb-4">
+        <i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i>
+    </div>
+    
+    <h4 class="text-muted mb-3">
+        {% if search_query or selected_month or completion_filter %}
+        Проекты не найдены
+        {% else %}
+        Проектов пока нет
+        {% endif %}
+    </h4>
+    
+    <p class="text-muted mb-4">
+        {% if search_query or selected_month or completion_filter %}
+        Попробуйте изменить параметры поиска
+        {% else %}
+        Создайте первый проект, чтобы начать работу
+        {% endif %}
+    </p>
+    
+    <div class="d-flex justify-content-center gap-3">
+        {% if search_query or selected_month or completion_filter %}
+        <a href="{% url 'project_list' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-counterclockwise"></i> Сбросить фильтры
+        </a>
+        {% endif %}
+        
+        <a href="{% url 'project_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Создать проект
+        </a>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

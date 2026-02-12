@@ -1,0 +1,5 @@
+project_management/__pycache__
+db.sqlite3
+projects/__pycache__
+projects/migrations
+projects/templatetags/__pycache__

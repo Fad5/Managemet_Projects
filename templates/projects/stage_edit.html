@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load bootstrap5 %}
+
+{% block title %}Редактирование этапа{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0">
+                    <i class="bi bi-pencil-square"></i> Редактирование этапа
+                </h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    <i class="bi bi-folder"></i> Проект: <strong>{{ stage.project.project_name }}</strong>
+                </p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i> Пожалуйста, исправьте ошибки ниже.
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="stage_name" class="form-label">
+                            <i class="bi bi-tag"></i> Название этапа *
+                        </label>
+                        <input type="text" class="form-control" id="stage_name" name="stage_name" 
+                               value="{{ stage.stage_name }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="status" class="form-label">
+                            <i class="bi bi-flag"></i> Статус *
+                        </label>
+                        <select class="form-control" id="status" name="status" required>
+                            <option value="not_started" {% if stage.status == 'not_started' %}selected{% endif %}>
+                                Не начат
+                            </option>
+                            <option value="in_progress" {% if stage.status == 'in_progress' %}selected{% endif %}>
+                                В работе
+                            </option>
+                            <option value="on_review" {% if stage.status == 'on_review' %}selected{% endif %}>
+                                На проверке
+                            </option>
+                            <option value="completed" {% if stage.status == 'completed' %}selected{% endif %}>
+                                Завершен
+                            </option>
+                            <option value="blocked" {% if stage.status == 'blocked' %}selected{% endif %}>
+                                Заблокирован
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="assigned_to" class="form-label">
+                            <i class="bi bi-person"></i> Исполнитель
+                        </label>
+                        <select class="form-control" id="assigned_to" name="assigned_to">
+                            <option value="">Не назначен</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}" 
+                                    {% if stage.assigned_to and user.id == stage.assigned_to.id %}selected{% endif %}>
+                                {{ user.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Выберите исполнителя этапа (необязательно)</div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'project_detail' stage.project.pk %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Назад к проекту
+                        </a>
+                        
+                        <div>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-check-circle"></i> Сохранить изменения
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="card-footer bg-light">
+                <small class="text-muted">
+                    <i class="bi bi-info-circle"></i> Изменения сохранятся сразу после нажатия кнопки.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Автоматический фокус на поле названия
+    document.getElementById('stage_name').focus();
+    
+    // Подсказки по статусам
+    const statusSelect = document.getElementById('status');
+    const statusTips = {
+        'not_started': 'Этап еще не начат',
+        'in_progress': 'Этап в процессе выполнения',
+        'on_review': 'Этап выполнен, ожидает проверки',
+        'completed': 'Этап завершен и проверен',
+        'blocked': 'Этап заблокирован (требует внимания)'
+    };
+    
+    const statusTipElement = document.createElement('div');
+    statusTipElement.className = 'form-text mt-1';
+    statusTipElement.id = 'statusTip';
+    statusSelect.parentNode.appendChild(statusTipElement);
+    
+    function updateStatusTip() {
+        const selectedStatus = statusSelect.value;
+        statusTipElement.textContent = statusTips[selectedStatus] || '';
+    }
+    
+    statusSelect.addEventListener('change', updateStatusTip);
+    updateStatusTip(); // Инициализация
+});
+</script>
+{% endblock %}
+{% endblock %}

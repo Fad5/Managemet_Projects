@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if project %}Изменить проект{% else %}Новый проект{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    {% if project %}
+                        Изменить проект
+                    {% else %}
+                        Новый проект
+                    {% endif %}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Название проекта -->
+                    <div class="mb-3">
+                        <label for="id_project_name" class="form-label">Название проекта *</label>
+                        <input type="text" name="project_name" class="form-control" 
+                               value="{{ form.project_name.value|default:'' }}" required>
+                    </div>
+                    
+                    <!-- Дата начала -->
+                    <div class="mb-3">
+                        <label for="id_start_date" class="form-label">Дата начала *</label>
+                        <input type="date" name="start_date" class="form-control" 
+                               value="{{ form.start_date.value|default:'' }}" required>
+                    </div>
+                    
+                    <!-- Описание -->
+                    <div class="mb-3">
+                        <label for="id_description" class="form-label">Описание</label>
+                        <textarea name="description" class="form-control" rows="3">{{ form.description.value|default:'' }}</textarea>
+                    </div>
+                    
+                    <!-- Ссылка на сервере -->
+                    <div class="mb-3">
+                        <label for="id_server_url" class="form-label">Ссылка на сервере</label>
+                        <input type="text" name="server_url" class="form-control" 
+                               value="{{ form.server_url.value|default:'' }}">
+                    </div>
+                    
+                    <!-- Ссылка на образцы -->
+                    <div class="mb-3">
+                        <label for="id_sample_url" class="form-label">Ссылка на размеры образцов</label>
+                        <input type="text" name="sample_url" class="form-control" 
+                               value="{{ form.sample_url.value|default:'' }}">
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% if project %}{% url 'project_detail' project.pk %}{% else %}{% url 'project_list' %}{% endif %}" 
+                           class="btn btn-secondary">
+                            Назад
+                        </a>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            {% if project %}
+                                Сохранить
+                            {% else %}
+                                Создать проект
+                            {% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Автоматически устанавливаем сегодняшнюю дату для поля start_date
+    {% if not project %}
+    const today = new Date().toISOString().split('T')[0];
+    const startDateField = document.querySelector('[name="start_date"]');
+    
+    if (startDateField && !startDateField.value) {
+        startDateField.value = today;
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}
