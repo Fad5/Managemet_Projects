@@ -5,11 +5,6 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-your-secret-key-here'
-
-DEBUG = False
-
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
 
 handler404 = 'projects.views.handler404'
 handler500 = 'projects.views.handler500'
@@ -94,3 +89,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'project_list'
 LOGOUT_REDIRECT_URL = 'login'
+
+
+try:
+    from .local_settings import *
+except ImportError:
+    from .prod_settings import *

@@ -70,6 +70,7 @@ class ProjectForm(forms.ModelForm):
             # Можно предупредить, но не блокировать
             pass
         return start_date
+    
 class ProjectStageForm(forms.ModelForm):
     class Meta:
         model = ProjectStage
