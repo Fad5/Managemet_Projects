@@ -10,7 +10,6 @@ class Project(models.Model):
     project_name = models.CharField(max_length=100, unique=True, verbose_name="Название проекта")
     # Убираем project_month - будет вычисляться из created_date
     created_date = models.DateField(verbose_name="Дата создания", auto_now_add=True)  # Автоматически
-    start_date = models.DateField(verbose_name="Дата начала")
     description = models.TextField(blank=True, verbose_name="Описание")
     
     # Новые поля

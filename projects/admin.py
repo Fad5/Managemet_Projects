@@ -5,7 +5,7 @@ from .models import Project, ProjectStage
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ('project_name', 'created_date', 'start_date', 'completion_percentage')
+    list_display = ('project_name', 'created_date', 'completion_percentage')
     list_filter = ('created_date',)  # Убрали project_month
     search_fields = ('project_name', 'description')
     readonly_fields = ('created_date', 'created_at', 'project_month')  # Добавили project_month как readonly

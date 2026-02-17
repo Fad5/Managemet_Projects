@@ -31,7 +31,6 @@ class ProjectForm(forms.ModelForm):
         model = Project
         fields = [
             'project_name', 
-            'start_date',  # только дата начала
             'description',
             'server_url',
             'sample_url'
@@ -44,12 +43,6 @@ class ProjectForm(forms.ModelForm):
         
         for field_name, field in self.fields.items():
             field.widget.attrs.update({'class': 'form-control'})
-        
-        # Только start_date - дата начала
-        self.fields['start_date'].widget = forms.DateInput(attrs={
-            'type': 'date',
-            'class': 'form-control'
-        })
         
         # Для текстового поля
         self.fields['description'].widget.attrs.update({'rows': 3})
