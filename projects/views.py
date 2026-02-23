@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.contrib.auth.models import User  
 from .models import Project, ProjectStage
 from .forms import CustomLoginForm, CustomUserCreationForm, ProjectForm, ProjectStageForm
+from .decorators import can_create_project, can_edit_project, can_delete_project,can_delete_stage, can_edit_stage
 
 def login_view(request):
     if request.method == 'POST':
@@ -26,6 +27,7 @@ def register_view(request):
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
+            # Профиль создается автоматически через сигнал
             login(request, user)
             messages.success(request, 'Регистрация прошла успешно!')
             return redirect('project_list')
@@ -42,39 +44,31 @@ from django.db.models import Q
 
 @login_required
 def project_list(request):
-    # Получаем уникальные месяцы для фильтрации из created_date
     months_raw = Project.objects.dates('created_date', 'month', order='DESC')
     months = [date.strftime('%Y-%m') for date in months_raw]
     
-    # Параметры фильтрации
     selected_month = request.GET.get('month')
     completion_filter = request.GET.get('completion')
     search_query = request.GET.get('search', '').strip()
     
-    # Начальный запрос
     projects = Project.objects.all().order_by('-created_date')
     
-    # Поиск без учета регистра
     if search_query:
         projects = projects.filter(
             Q(project_name__icontains=search_query) |
             Q(description__icontains=search_query)
         )
     
-    # Фильтр по месяцу (из created_date)
     if selected_month:
         try:
-            # Преобразуем YYYY-MM в дату
             year, month = map(int, selected_month.split('-'))
-            # Фильтруем по году и месяцу
             projects = [
                 p for p in projects 
                 if p.created_date.year == year and p.created_date.month == month
             ]
         except:
-            pass  # Если неправильный формат месяца
+            pass
     
-    # Фильтр по проценту выполнения
     if completion_filter:
         if completion_filter == '0':
             projects = [p for p in projects if p.completion_percentage == 0]
@@ -88,11 +82,14 @@ def project_list(request):
     # Статистика
     all_projects = Project.objects.all()
     total_projects = all_projects.count()
-    
-    # Счетчики для статистики
     not_started = sum(1 for p in all_projects if p.completion_percentage == 0)
     in_progress = sum(1 for p in all_projects if 0 < p.completion_percentage < 100)
     completed = sum(1 for p in all_projects if p.completion_percentage == 100)
+    
+    # Проверяем права пользователя для отображения кнопок
+    can_create = request.user.profile.can_create_projects or request.user.is_superuser
+    can_edit = request.user.profile.can_edit_projects or request.user.is_superuser
+    can_delete = request.user.profile.can_delete_projects or request.user.is_superuser
     
     context = {
         'projects': projects,
@@ -104,6 +101,9 @@ def project_list(request):
         'not_started': not_started,
         'in_progress': in_progress,
         'completed': completed,
+        'can_create': can_create,
+        'can_edit': can_edit,
+        'can_delete': can_delete,
     }
     
     return render(request, 'projects/project_list.html', context)
@@ -112,18 +112,33 @@ def project_list(request):
 def project_detail(request, pk):
     project = get_object_or_404(Project, pk=pk)
     stages = project.stages.all()
-    users = User.objects.filter(is_active=True)  # Добавьте эту строку
+    users = User.objects.filter(is_active=True)
+    
+    # Проверяем права для отображения кнопок
+    can_edit_project = request.user.profile.can_edit_projects or request.user.is_superuser
+    can_delete_project = request.user.profile.can_delete_projects or request.user.is_superuser
+    
+    # Права для этапов
+    can_create_stage = request.user.profile.can_create_stages or request.user.is_superuser
+    can_edit_stage = request.user.profile.can_edit_stages or request.user.is_superuser
+    can_delete_stage = request.user.profile.can_delete_stages or request.user.is_superuser
     
     if request.method == 'POST':
         if 'add_stage' in request.POST:
+            if not can_create_stage:
+                messages.error(request, 'У вас нет прав для создания этапов')
+                return redirect('project_detail', pk=pk)
+                
             stage_name = request.POST.get('stage_name')
             status = request.POST.get('status')
             assigned_to_id = request.POST.get('assigned_to')
+            comment = request.POST.get('comment', '')
             
             stage = ProjectStage(
                 project=project,
                 stage_name=stage_name,
-                status=status
+                status=status,
+                comment=comment
             )
             
             if assigned_to_id:
@@ -140,17 +155,26 @@ def project_detail(request, pk):
     context = {
         'project': project,
         'stages': stages,
-        'users': users,  # Добавьте эту строку
+        'users': users,
         'completion_percentage': project.completion_percentage,
+        'can_edit_project': can_edit_project,
+        'can_delete_project': can_delete_project,
+        'can_create_stage': can_create_stage,
+        'can_edit_stage': can_edit_stage,
+        'can_delete_stage': can_delete_stage,
     }
     return render(request, 'projects/project_detail.html', context)
 
+
 @login_required
+@can_create_project
 def project_create(request):
     if request.method == 'POST':
         form = ProjectForm(request.POST)
         if form.is_valid():
-            form.save()
+            project = form.save(commit=False)
+            project.created_by = request.user
+            project.save()
             messages.success(request, 'Проект успешно создан')
             return redirect('project_list')
     else:
@@ -159,6 +183,7 @@ def project_create(request):
     return render(request, 'projects/project_form.html', {'form': form})
 
 @login_required
+@can_edit_project
 def project_edit(request, pk):
     project = get_object_or_404(Project, pk=pk)
     
@@ -173,19 +198,18 @@ def project_edit(request, pk):
     
     return render(request, 'projects/project_form.html', {'form': form, 'project': project})
 
+
 @login_required
+@can_edit_stage
 def stage_edit(request, pk):
     stage = get_object_or_404(ProjectStage, pk=pk)
     
     if request.method == 'POST':
-        stage_name = request.POST.get('stage_name')
-        status = request.POST.get('status')
+        stage.stage_name = request.POST.get('stage_name')
+        stage.status = request.POST.get('status')
+        stage.comment = request.POST.get('comment', '')
+        
         assigned_to_id = request.POST.get('assigned_to')
-        
-        # Обновляем данные этапа
-        stage.stage_name = stage_name
-        stage.status = status
-        
         if assigned_to_id:
             try:
                 assigned_to = User.objects.get(id=assigned_to_id)
@@ -199,7 +223,6 @@ def stage_edit(request, pk):
         messages.success(request, 'Этап успешно обновлен')
         return redirect('project_detail', pk=stage.project.pk)
     
-    # Получаем всех активных пользователей для выпадающего списка
     users = User.objects.filter(is_active=True)
     
     context = {
@@ -209,6 +232,7 @@ def stage_edit(request, pk):
     return render(request, 'projects/stage_edit.html', context)
 
 @login_required
+@can_delete_stage
 def stage_delete(request, pk):
     stage = get_object_or_404(ProjectStage, pk=pk)
     project_pk = stage.project.pk
@@ -217,6 +241,7 @@ def stage_delete(request, pk):
     return redirect('project_detail', pk=project_pk)
 
 @login_required
+@can_delete_project
 def project_delete(request, pk):
     project = get_object_or_404(Project, pk=pk)
     
@@ -224,6 +249,8 @@ def project_delete(request, pk):
         project.delete()
         messages.success(request, 'Проект успешно удален')
         return redirect('project_list')
+    
+    return redirect('project_detail', pk=pk)
     
     # Если GET запрос, перенаправляем на детали проекта
     return redirect('project_detail', pk=pk)

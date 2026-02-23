@@ -7,14 +7,24 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1>{{ project.project_name }}</h1>
+        <p class="text-muted">
+            <i class="bi bi-calendar-month"></i> Месяц: {{ project.project_month }}
+        </p>
     </div>
     <div>
+        <a href="{% url 'project_list' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+        {% if can_edit %}
         <a href="{% url 'project_edit' project.pk %}" class="btn btn-secondary">
             <i class="bi bi-pencil"></i> Изменить
         </a>
+        {% endif %}
+        {% if can_delete %}
         <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
             <i class="bi bi-trash"></i> Удалить
         </button>
+        {% endif %}
     </div>
 </div>
 
@@ -80,12 +90,15 @@
 {% endif %}
 
 <!-- Этапы проекта -->
+<!-- Этапы проекта -->
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Этапы проекта</h5>
+        {% if can_create_stage %}
         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addStageModal">
             <i class="bi bi-plus-circle"></i> Добавить этап
         </button>
+        {% endif %}
     </div>
     <div class="card-body">
         {% if stages %}
@@ -96,6 +109,7 @@
                         <th>Название этапа</th>
                         <th>Статус</th>
                         <th>Исполнитель</th>
+                        <th>Комментарий</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
@@ -115,17 +129,32 @@
                         </td>
                         <td>{{ stage.assigned_to.username|default:"Не назначен" }}</td>
                         <td>
+                            {% if stage.comment %}
+                            <span class="d-inline-block" tabindex="0" data-bs-toggle="popover" 
+                                  data-bs-trigger="hover focus" title="Комментарий" 
+                                  data-bs-content="{{ stage.comment }}">
+                                <i class="bi bi-chat-dots text-info"></i>
+                            </span>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             <div class="d-flex gap-1">
+                                {% if can_edit_stage %}
                                 <a href="{% url 'stage_edit' stage.pk %}" class="btn btn-sm btn-outline-secondary">
-                                    <i class="bi bi-pencil me-1"></i> Изменить
+                                    <i class="bi bi-pencil"></i>
                                 </a>
+                                {% endif %}
+                                {% if can_delete_stage %}
                                 <form method="post" action="{% url 'stage_delete' stage.pk %}" class="d-inline">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-outline-danger" 
                                             onclick="return confirm('Удалить этот этап?')">
-                                        <i class="bi bi-trash me-1"></i> Удалить
+                                        <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -135,11 +164,69 @@
         </div>
         {% else %}
         <div class="alert alert-info text-center">
-            <i class="bi bi-info-circle"></i> Этапов пока нет. Добавьте первый этап.
+            <i class="bi bi-info-circle"></i> Этапов пока нет.
+            {% if can_create_stage %}
+            Добавьте первый этап.
+            {% endif %}
         </div>
         {% endif %}
     </div>
 </div>
+
+<!-- Модальное окно добавления этапа - показываем только если есть права -->
+{% if can_create_stage %}
+<div class="modal fade" id="addStageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить этап</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="add_stage" value="1">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="stage_name" class="form-label">Название этапа *</label>
+                        <input type="text" class="form-control" id="stage_name" name="stage_name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Статус *</label>
+                        <select class="form-control" id="status" name="status" required>
+                            <option value="not_started">Не начат</option>
+                            <option value="in_progress">В работе</option>
+                            <option value="on_review">На проверке</option>
+                            <option value="completed">Завершен</option>
+                            <option value="blocked">Заблокирован</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="assigned_to" class="form-label">Исполнитель</label>
+                        <select class="form-control" id="assigned_to" name="assigned_to">
+                            <option value="">Не назначен</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="comment" class="form-label">Комментарий</label>
+                        <textarea class="form-control" id="comment" name="comment" rows="3" 
+                                  placeholder="Добавьте комментарий к этапу"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Модальное окно добавления этапа -->
 <div class="modal fade" id="addStageModal" tabindex="-1">

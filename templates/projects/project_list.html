@@ -8,9 +8,11 @@
     <h1 class="mb-0">
         <i class="bi bi-kanban"></i> Проекты
     </h1>
+    {% if can_create %}
     <a href="{% url 'project_create' %}" class="btn btn-primary">
         <i class="bi bi-plus-circle"></i> Новый проект
     </a>
+    {% endif %}
 </div>
 
 <!-- Панель поиска и фильтров -->
@@ -164,7 +166,7 @@
                 {% if project.description %}
                 <div>
                     <small class="text-muted">Описание</small>
-                    <p class="mb-0">{{ project.description|truncatechars:100 }}</p>
+                    <p class="mb-0">{{ project.description|truncatechars:40 }}</p>
                 </div>
                 {% endif %}
             </div>
